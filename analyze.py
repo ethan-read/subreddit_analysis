@@ -9,7 +9,8 @@ import datetime
 
 def analyze_sample(url: str, data: pd.DataFrame, row: int) -> None:
     """
-    Updates one row in <data> with the comment averages.
+    Queries the PushShift API for one sample of comments and updates <data>
+    with information about the sample.
     """
     response = requests.get(url)
     if response.status_code !=200:  # Server eror, try one more time
@@ -36,14 +37,14 @@ def analyze_sample(url: str, data: pd.DataFrame, row: int) -> None:
     data[row][4] = len(comments)
 
 
-def analyze(start_time: int, subreddit: str, sample_size: int,
+def analyze(start_time: int, subreddit: str, sample_size=100,
             end_time=int(time.time()), daily_offset=30000, small_sample_regime=0) -> pd.DataFrame:
     """
     Returns a DataFrame with daily average comment and word length.
 
     start_time: A UTC timestamp that determines the starting point of the analysis.
 
-    sample_size: The number of comments sampled each day.
+    sample_size: The number of comments sampled each day, maximum 100.
 
     daily_offset: A random number of seconds are added to the daily sampling time to
     avoid sampling bias. This parameter is the upper bound for the offset.
@@ -79,9 +80,7 @@ def analyze(start_time: int, subreddit: str, sample_size: int,
 def moving_avg(values: np.ndarray, interval: int, front_trim=20, end_trim=0) -> np.ndarray:
     """
     Since the values near the endpoints are not fully averaged, there are optional arguments
-    to remove them from the final result. In the typical use case of a subreddit
-    succumbing to the unwashed masses, the values near the endpoint are less prone to noise,
-    so it defaults to 0.
+    to remove them from the final result.'
     """
 
     smoothed = np.zeros(len(values))
@@ -93,7 +92,7 @@ def moving_avg(values: np.ndarray, interval: int, front_trim=20, end_trim=0) -> 
     return smoothed[front_trim : len(values) - end_trim]
 
 
-def make_plots(results: pd.DataFrame, subreddit: str, smoothing=50) -> None:
+def make_plots(results: pd.DataFrame, subreddit: str, smoothing=75, front_trim=20) -> None:
     # Remove all unsuccsesful requests
     cleaned_results = results[results['Response Code'] == 200]
 
@@ -103,7 +102,7 @@ def make_plots(results: pd.DataFrame, subreddit: str, smoothing=50) -> None:
 
     plt.figure()
     plt.title(f'Average /r/{subreddit} Comment Length')
-    plt.plot(moving_avg(cleaned_results['Comment Length'].values, smoothing))
+    plt.plot(moving_avg(cleaned_results['Comment Length'].values, smoothing, front_trim=front_trim))
     ax = plt.axes()
     ax.set_xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1])
     ax.set_xticklabels([dates[0], dates[int(len(dates)/3)],
@@ -113,7 +112,7 @@ def make_plots(results: pd.DataFrame, subreddit: str, smoothing=50) -> None:
 
     plt.figure()
     plt.title(f'Average /r/{subreddit} Word Length')
-    plt.plot(moving_avg(cleaned_results['Word Length'].values, smoothing), 'red')
+    plt.plot(moving_avg(cleaned_results['Word Length'].values, smoothing, front_trim=front_trim), 'red')
     ax = plt.axes()
     ax.set_xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1])
     ax.set_xticklabels([dates[0], dates[int(len(dates)/3)],
@@ -125,13 +124,12 @@ def make_plots(results: pd.DataFrame, subreddit: str, smoothing=50) -> None:
 if __name__ == '__main__':
 
     SUBREDDIT = 'pics'  # no slashes
-    SAMPLE_SIZE = 100  # Number of comments per day, maximum 100
     NUMBER_OF_DAYS = 850  # Total processing time will require about 1 sec per day
 
     start_time = int(time.time()) - NUMBER_OF_DAYS * 86400
-    results = analyze(start_time, SUBREDDIT, SAMPLE_SIZE, small_sample_regime=100)
+    results = analyze(start_time, SUBREDDIT)
     results.to_csv(f'{SUBREDDIT}_analysis.csv')
-    make_plots(results, SUBREDDIT, smoothing=75)
+    make_plots(results, SUBREDDIT)
 
 
     # For replotting without running the whole thing again
