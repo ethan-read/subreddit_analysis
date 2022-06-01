@@ -84,7 +84,7 @@ def moving_avg(values: np.ndarray, interval: int, front_trim=20, end_trim=0) -> 
     """
 
     smoothed = np.zeros(len(values))
-    for i in range(interval):
+    for i in range(1, interval):
         smoothed[i] = np.mean(values[:i])
     for i in range(interval, len(values)):
         smoothed[i] = np.mean(values[i - interval : i])
@@ -99,32 +99,27 @@ def make_plots(results: pd.DataFrame, subreddit: str, smoothing=75, front_trim=2
     # Make the retrieval times readable for the x-axis
     dates = list(map(lambda utc: str(datetime.date.fromtimestamp(utc)),
                          cleaned_results['Retrieval Time'].values))
-
     plt.figure()
     plt.title(f'Average /r/{subreddit} Comment Length')
     plt.plot(moving_avg(cleaned_results['Comment Length'].values, smoothing, front_trim=front_trim))
-    ax = plt.axes()
-    ax.set_xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1])
-    ax.set_xticklabels([dates[0], dates[int(len(dates)/3)],
-                        dates[2*int(len(dates)/3)], dates[-1]])
-    ax.set_ylabel('Characters per Comment')
+    plt.xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1],
+               labels=[dates[0], dates[int(len(dates)/3)], dates[2*int(len(dates)/3)], dates[-1]])
+    plt.ylabel('Characters per Comment')
     plt.show()
 
     plt.figure()
     plt.title(f'Average /r/{subreddit} Word Length')
-    plt.plot(moving_avg(cleaned_results['Word Length'].values, smoothing, front_trim=front_trim), 'red')
-    ax = plt.axes()
-    ax.set_xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1])
-    ax.set_xticklabels([dates[0], dates[int(len(dates)/3)],
-                        dates[2*int(len(dates)/3)], dates[-1]])
-    ax.set_ylabel('Characters per Space')
+    plt.plot(moving_avg(cleaned_results['Word Length'], smoothing, front_trim=front_trim), 'red')
+    plt.xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1],
+               labels=[dates[0], dates[int(len(dates)/3)], dates[2*int(len(dates)/3)], dates[-1]])
+    plt.ylabel('Characters per Space')
     plt.show()
 
 
 if __name__ == '__main__':
 
     SUBREDDIT = 'pics'  # no slashes
-    NUMBER_OF_DAYS = 850  # Total processing time will require about 1 sec per day
+    NUMBER_OF_DAYS = 950  # Total processing time will require about 1 sec per day
 
     start_time = int(time.time()) - NUMBER_OF_DAYS * 86400
     results = analyze(start_time, SUBREDDIT)
