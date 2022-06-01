@@ -47,10 +47,12 @@ def analyze(start_time: int, subreddit: str, sample_size=100,
     sample_size: The number of comments sampled each day, maximum 100.
 
     daily_offset: A random number of seconds are added to the daily sampling time to
-    avoid sampling bias. This parameter is the upper bound for the offset.
+    avoid sampling bias from using the same time every day. This parameter is the upper
+    bound for the offset.
 
     small_sample_regime: Specifies a number of days for which the daily offset is 0
-    and the program limits itself to 24 hours of comments. Useful if a subreddit grows quickly.
+    and the program limits itself to 24 hours of comments. Use if the earlier stages of
+    the analysis contain fewer comments than the daily sample size.
     """
     if start_time >= end_time:
         raise ValueError("start_time must be smaller than end_time")
@@ -58,7 +60,7 @@ def analyze(start_time: int, subreddit: str, sample_size=100,
     data = np.zeros((days, 5))
 
     for i in range(days):
-        print(f'day + {i}')
+        print(f'day {i}')
         daily_start_time = start_time + i * 86400 + randint(0, 30000)
         url = 'https://api.pushshift.io/reddit/search/comment/' + \
         f'?subreddit={subreddit}&after={daily_start_time}&fields=body&size={sample_size}'
@@ -103,7 +105,7 @@ def make_plots(results: pd.DataFrame, subreddit: str, smoothing=75, front_trim=2
     plt.figure()
     plt.title(f'Average /r/{subreddit} Comment Length')
     plt.plot(moving_avg(cleaned_results['Comment Length'].values, smoothing, front_trim=front_trim))
-    plt.xticks([0, n_days, 2*n_days//3, n_days-1],
+    plt.xticks([0, n_days//3, 2*n_days//3, n_days-1],
                labels=[dates[0], dates[n_days//3], dates[2*n_days//3], dates[-1]])
     plt.ylabel('Characters per Comment')
     plt.show()
@@ -131,12 +133,12 @@ if __name__ == '__main__':
 #########################################################################################
 
 
-    # results = analyze(start_time, SUBREDDIT)
-    # results.to_csv(f'{SUBREDDIT}_analysis.csv')
+    results = analyze(start_time, SUBREDDIT)
+    results.to_csv(f'{SUBREDDIT}_analysis.csv')
 
 
 # For replotting without running the whole thing again
-    results = pd.read_csv(f'{SUBREDDIT}_analysis.csv')
+    # results = pd.read_csv(f'{SUBREDDIT}_analysis.csv')
 
     make_plots(results, SUBREDDIT)
 
