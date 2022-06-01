@@ -58,7 +58,7 @@ def analyze(start_time: int, subreddit: str, sample_size=100,
     data = np.zeros((days, 5))
 
     for i in range(days):
-        print(i)
+        print(f'day + {i}')
         daily_start_time = start_time + i * 86400 + randint(0, 30000)
         url = 'https://api.pushshift.io/reddit/search/comment/' + \
         f'?subreddit={subreddit}&after={daily_start_time}&fields=body&size={sample_size}'
@@ -99,38 +99,48 @@ def make_plots(results: pd.DataFrame, subreddit: str, smoothing=75, front_trim=2
     # Make the retrieval times readable for the x-axis
     dates = list(map(lambda utc: str(datetime.date.fromtimestamp(utc)),
                          cleaned_results['Retrieval Time'].values))
+    n_days = len(dates)
     plt.figure()
     plt.title(f'Average /r/{subreddit} Comment Length')
     plt.plot(moving_avg(cleaned_results['Comment Length'].values, smoothing, front_trim=front_trim))
-    plt.xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1],
-               labels=[dates[0], dates[int(len(dates)/3)], dates[2*int(len(dates)/3)], dates[-1]])
+    plt.xticks([0, n_days, 2*n_days//3, n_days-1],
+               labels=[dates[0], dates[n_days//3], dates[2*n_days//3], dates[-1]])
     plt.ylabel('Characters per Comment')
     plt.show()
 
     plt.figure()
     plt.title(f'Average /r/{subreddit} Word Length')
     plt.plot(moving_avg(cleaned_results['Word Length'], smoothing, front_trim=front_trim), 'red')
-    plt.xticks([0, int(len(dates)/3), 2*int(len(dates)/3), len(dates)-1],
-               labels=[dates[0], dates[int(len(dates)/3)], dates[2*int(len(dates)/3)], dates[-1]])
+    plt.xticks([0, n_days//3, 2*n_days//3, n_days-1],
+               labels=[dates[0], dates[n_days//3], dates[2*n_days//3], dates[-1]])
     plt.ylabel('Characters per Space')
     plt.show()
 
 
 if __name__ == '__main__':
 
-    SUBREDDIT = 'pics'  # no slashes
+    SUBREDDIT = 'redscarepod'  # no slashes
     NUMBER_OF_DAYS = 950  # Total processing time will require about 1 sec per day
-
     start_time = int(time.time()) - NUMBER_OF_DAYS * 86400
-    results = analyze(start_time, SUBREDDIT)
-    results.to_csv(f'{SUBREDDIT}_analysis.csv')
+
+#########################################################################################
+#  The following block queries the API and then saves it to a csv file. Running it takes about
+#  1 second per day due to server constraints (~5min/yr), so if you want to play around
+#  with the plotting functions or just plot them again because you didn't save them,
+#  then comment out this block and uncomment the line below it
+#########################################################################################
+
+
+    # results = analyze(start_time, SUBREDDIT)
+    # results.to_csv(f'{SUBREDDIT}_analysis.csv')
+
+
+# For replotting without running the whole thing again
+    results = pd.read_csv(f'{SUBREDDIT}_analysis.csv')
+
     make_plots(results, SUBREDDIT)
 
 
-    # For replotting without running the whole thing again
-
-    # results = pd.read_csv(f'{SUBREDDIT}_analysis.csv')
-    # make_plots(results, SUBREDDIT,smoothing=70)
 
 
 
